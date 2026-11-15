@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Reddit 账号监控</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #f5f6f8; color: #1f2329; font: 14px/1.6 "Microsoft YaHei", "PingFang SC", -apple-system, "Segoe UI", sans-serif; }
+  #boot { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; }
+  #boot b { display: block; font-size: 16px; margin-bottom: 6px; }
+  #boot span { color: #646a73; }
+</style>
+</head>
+<body>
+<div id="boot"><div><b>Reddit 账号监控</b><span id="boot-msg">正在加载数据…</span></div></div>
+<script>
+  // 这个页面只做一件事：读同目录下的 data.json（云端采集程序写的），交给看板显示。它不向 Reddit 发任何请求。
+  (function () {
+    var msg = document.getElementById('boot-msg');
+    fetch('data.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        window.__RMC_VIEW = { store: (d && d.store) || {}, status: (d && d.status) || null, generated_at: (d && d.generated_at) || null };
+        var s = document.createElement('script');
+        s.src = 'dashboard.js?t=' + Date.now();
+        s.onload = function () { var b = document.getElementById('boot'); if (b) b.remove(); };
+        s.onerror = function () { msg.textContent = '看板程序没有加载出来，请刷新页面再试。'; };
+        document.body.appendChild(s);
+      })
+      .catch(function (e) { msg.textContent = '数据没有加载出来（' + e.message + '），请刷新页面再试。'; });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "reddit-monitor-cloud-collector",
+  "private": true,
+  "version": "1.0.0",
+  "description": "云端定时采集：在云端浏览器里运行 Reddit 账号监控脚本",
+  "scripts": { "collect": "node run.js" },
+  "dependencies": { "playwright": "1.65.1" }
+}

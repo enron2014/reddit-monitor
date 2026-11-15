@@ -1,0 +1,67 @@
+name: 云端采集并发布看板
+
+on:
+  schedule:
+    # 每天两次。这里写的是 UTC 时间：00:23 和 12:23，对应波哥大时间 19:23 和 07:23。
+    - cron: '23 0,12 * * *'
+  workflow_dispatch: {}   # 也可以在 Actions 页面手动点 "Run workflow"
+
+permissions:
+  contents: write   # 把采集结果（docs/data.json）存回仓库
+  pages: write      # 发布网页
+  id-token: write
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 取出项目文件
+        uses: actions/checkout@v6
+
+      - name: 安装云端浏览器
+        working-directory: collector
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: 采集
+        id: collect
+        continue-on-error: true
+        working-directory: collector
+        env:
+          REDDIT_COOKIE: ${{ secrets.REDDIT_COOKIE }}
+        run: node run.js
+
+      - name: 保存采集结果
+        run: |
+          git config user.name "reddit-monitor-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data.json
+          git diff --cached --quiet || git commit -m "data: $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
+
+      - name: 准备网页
+        uses: actions/configure-pages@v5
+
+      - name: 打包网页
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+      - name: 发布网页
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: 采集没有成功时把这次运行标红
+        if: steps.collect.outcome == 'failure'
+        run: |
+          echo "采集没有成功。原因见上面「采集」一步的最后几行，网页顶部也会显示。"
+          exit 1
